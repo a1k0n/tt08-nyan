@@ -2,7 +2,7 @@ import os
 import sys
 import numpy as np
 from PIL import Image
-from gamma import gamma_correct
+from gamma import gamma_correct, dither_correct
 
 bgr = 0x0f
 bgg = 0x4d
@@ -24,6 +24,7 @@ print(palette)
 
 # Replace the original palette with the gamma-corrected one
 palette = gamma_correct(palette)
+palette = dither_correct(palette)
 
 print("Gamma-corrected palette:")
 print(palette)
@@ -35,13 +36,13 @@ print('  reg [5:0] palette_g[0:7];')
 print('  reg [5:0] palette_b[0:7];')
 print('initial begin')
 print('  palette_r = \'{')
-print('    ', ', '.join([f'\'h{x >> 3:02x}' for x in palette[0::3]]))
+print('    ', ', '.join([f'\'h{x:02x}' for x in palette[0::3]]))
 print('  };')
 print('  palette_g = \'{')
-print('    ', ', '.join([f'\'h{x >> 3:02x}' for x in palette[1::3]]))
+print('    ', ', '.join([f'\'h{x:02x}' for x in palette[1::3]]))
 print('  };')
 print('  palette_b = \'{')
-print('    ', ', '.join([f'\'h{x >> 3:02x}' for x in palette[2::3]]))
+print('    ', ', '.join([f'\'h{x:02x}' for x in palette[2::3]]))
 print('  };')
 print('end')
 
@@ -49,9 +50,9 @@ if True:
     palr = open("../data/palette_r.hex", "w")
     palg = open("../data/palette_g.hex", "w")
     palb = open("../data/palette_b.hex", "w")
-    palr.write(' '.join([f'{x >> 3:02x}' for x in palette[0::3]]))
-    palg.write(' '.join([f'{x >> 3:02x}' for x in palette[1::3]]))
-    palb.write(' '.join([f'{x >> 3:02x}' for x in palette[2::3]]))
+    palr.write(' '.join([f'{x:02x}' for x in palette[0::3]]))
+    palg.write(' '.join([f'{x:02x}' for x in palette[1::3]]))
+    palb.write(' '.join([f'{x:02x}' for x in palette[2::3]]))
     palr.write('\n')
     palg.write('\n')
     palb.write('\n')

@@ -57,18 +57,18 @@ module tt_um_a1k0n_nyancat(
   
   wire [9:0] moving_x = pix_x + (counter<<2);
 
-  reg [4:0] palette_r[0:7];
-  reg [4:0] palette_g[0:7];
-  reg [4:0] palette_b[0:7];
+  reg [5:0] palette_r[0:7];
+  reg [5:0] palette_g[0:7];
+  reg [5:0] palette_b[0:7];
   initial begin
     $readmemh("../data/palette_r.hex", palette_r);
     $readmemh("../data/palette_g.hex", palette_g);
     $readmemh("../data/palette_b.hex", palette_b);
   end
 
-  reg [4:0] rainbow_r[0:7];
-  reg [4:0] rainbow_g[0:7];
-  reg [4:0] rainbow_b[0:7];
+  reg [5:0] rainbow_r[0:7];
+  reg [5:0] rainbow_g[0:7];
+  reg [5:0] rainbow_b[0:7];
   initial begin
     $readmemh("../data/rainbow_r.hex", rainbow_r);  
     $readmemh("../data/rainbow_g.hex", rainbow_g);
@@ -100,13 +100,13 @@ module tt_um_a1k0n_nyancat(
 
   wire star = idx == 0 && (moving_x[9:3] == line_lfsr);
 
-  wire [4:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 31 : palette_r[idx];
-  wire [4:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 31 : palette_g[idx];
-  wire [4:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 31 : palette_b[idx];
+  wire [5:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 48 : palette_r[idx];
+  wire [5:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 48 : palette_g[idx];
+  wire [5:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 48 : palette_b[idx];
 
-  wire [5:0] dr = r + r[4:1] + {1'b0, bayer} + {4'b0, r[4]} + {4'b0, r[0]};
-  wire [5:0] dg = g + g[4:1] + {1'b0, bayer} + {4'b0, g[4]} + {4'b0, g[0]};
-  wire [5:0] db = b + b[4:1] + {1'b0, bayer} + {4'b0, b[4]} + {4'b0, b[0]};
+  wire [5:0] dr = r + {2'b0, bayer};
+  wire [5:0] dg = g + {2'b0, bayer};
+  wire [5:0] db = b + {2'b0, bayer};
 
   assign R = video_active ? dr[5:4] : 2'b0;
   assign G = video_active ? dg[5:4] : 2'b0;
