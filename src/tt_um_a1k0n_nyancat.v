@@ -168,8 +168,8 @@ module tt_um_a1k0n_nyancat(
   wire [7:0] audio_pwm_accum_next = audio_pwm_accum + audio_sample;
   wire audio_pwm = audio_pwm_accum_next[7];
 
-  reg [3:0] sample_beat_ctr;
-  wire [3:0] sample_beat_ctr_next = sample_beat_ctr + 1;
+  reg [2:0] sample_beat_ctr;
+  wire [2:0] sample_beat_ctr_next = sample_beat_ctr + 1;
 
   // song loops from 0..287
   reg [8:0] songpos;
