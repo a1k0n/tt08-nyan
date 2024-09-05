@@ -32,7 +32,7 @@ for i, track in enumerate(midi_file.tracks):
                 bassnote[T//96] = note
                 bassoct[T//96] = oct
                 basstrigger[T//96] = 1
-            else:
+            elif oct < 7 or (oct == 7 and note < 6):  # filter out an extra F#7
                 melodynote[T//96] = note
                 melodyoct[T//96] = oct
                 melodytrigger[T//96] = 1

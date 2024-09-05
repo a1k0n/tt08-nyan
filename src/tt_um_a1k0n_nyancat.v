@@ -42,8 +42,10 @@ module tt_um_a1k0n_nyancat(
 
   reg [9:0] counter;
   reg [3:0] nyanframe;
+  /*
   reg [6:0] line_lfsr;
   wire [6:0] line_lfsr_next = {line_lfsr[0], line_lfsr[0]^line_lfsr[6], line_lfsr[5:1]};
+  */
 
   hvsync_generator hvsync_gen(
     .clk(clk),
@@ -98,11 +100,16 @@ module tt_um_a1k0n_nyancat(
 
   wire [3:0] rainbow_off = pix_y[7:3] - 5 + moving_x[6];
 
+/*
   wire star = idx == 0 && (moving_x[9:3] == line_lfsr);
 
   wire [5:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 48 : palette_r[idx];
   wire [5:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 48 : palette_g[idx];
   wire [5:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 48 : palette_b[idx];
+*/
+  wire [5:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : palette_r[idx];
+  wire [5:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : palette_g[idx];
+  wire [5:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : palette_b[idx];
 
   wire [5:0] dr = r + {2'b0, bayer};
   wire [5:0] dg = g + {2'b0, bayer};
@@ -153,11 +160,11 @@ module tt_um_a1k0n_nyancat(
    cur_melody_oct == 1 ? sqr_pha[11] : sqr_pha[12];
   reg [5:0] sqr_vol;
 
-  wire [7:0] audio_sample = (sqr_sample ? sqr_vol : 0) + (bass_sample ? bass_vol : 0);
+  wire [6:0] audio_sample = (sqr_sample ? sqr_vol : 0) + (bass_sample ? bass_vol : 0);
 
-  reg [7:0] audio_pwm_accum;
-  wire [8:0] audio_pwm_accum_next = audio_pwm_accum + audio_sample;
-  wire audio_pwm = audio_pwm_accum_next[8];
+  reg [6:0] audio_pwm_accum;
+  wire [7:0] audio_pwm_accum_next = audio_pwm_accum + audio_sample;
+  wire audio_pwm = audio_pwm_accum_next[7];
 
   reg [3:0] sample_beat_ctr;
   wire [3:0] sample_beat_ctr_next = sample_beat_ctr + 1;
@@ -234,6 +241,7 @@ module tt_um_a1k0n_nyancat(
     end else begin
       if (pix_x == 0) begin
         new_sample;
+        /*
         if (pix_y == 0) begin
           line_lfsr <= 'h5a;
         end else begin
@@ -241,6 +249,7 @@ module tt_um_a1k0n_nyancat(
             line_lfsr <= line_lfsr_next;
           end
         end
+        */
       end
       audio_pwm_accum <= audio_pwm_accum_next;
     end
