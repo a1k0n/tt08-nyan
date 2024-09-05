@@ -30,11 +30,15 @@ module tt_um_a1k0n_nyancat(
   assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
 
   // Unused outputs assigned to 0.
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+  assign uio_out[7] = audio_pwm;
+  assign uio_out[6:0] = 0;
+  assign uio_oe[7] = 1;
+  assign uio_oe[6:0] = 0;
 
   // Suppress unused signals warning
   wire _unused_ok = &{ena, ui_in, uio_in, r[2:0]};
+
+  // ------ VIDEO ------
 
   reg [9:0] counter;
   reg [3:0] nyanframe;
@@ -108,6 +112,96 @@ module tt_um_a1k0n_nyancat(
   assign G = video_active ? dg[5:4] : 2'b0;
   assign B = video_active ? db[5:4] : 2'b0;
 
+  // ------ AUDIO ------
+
+  reg [1:0] melody_oct [0:287];
+  reg [2:0] melody_note [0:287];
+  reg melody_trigger [0:287];
+  reg [1:0] bass_oct [0:287];
+  reg [2:0] bass_note [0:287];
+  reg bass_trigger [0:287];
+  initial begin
+    $readmemh("../data/melodyoct.hex", melody_oct);
+    $readmemh("../data/melodynote.hex", melody_note);
+    $readmemh("../data/melodytrigger.hex", melody_trigger);
+    $readmemh("../data/bassoct.hex", bass_oct);
+    $readmemh("../data/bassnote.hex", bass_note);
+    $readmemh("../data/basstrigger.hex", bass_trigger);
+  end
+
+  reg [7:0] noteinctable [0:7];
+  initial begin
+    $readmemh("../data/noteinc.hex", noteinctable);
+  end
+
+  reg [15:0] bass_pha;
+  wire [2:0] cur_bass_note = bass_note[songpos];
+  wire [1:0] cur_bass_oct = bass_oct[songpos];
+  wire [7:0] bass_inc = noteinctable[cur_bass_note];
+  wire bass_sample = cur_bass_oct == 3 ? bass_pha[12] :
+                      cur_bass_oct == 2 ? bass_pha[13] :
+                     cur_bass_oct == 1 ? bass_pha[14] :
+                      bass_pha[15];
+  reg [5:0] bass_vol;
+
+  reg [12:0] sqr_pha;
+  wire [2:0] cur_melody_note = melody_note[songpos];
+  wire [1:0] cur_melody_oct = melody_oct[songpos];
+  wire [7:0] sqr_inc = noteinctable[cur_melody_note];
+  wire sqr_sample =
+   cur_melody_oct == 2 ? sqr_pha[10] :
+   cur_melody_oct == 1 ? sqr_pha[11] : sqr_pha[12];
+  reg [5:0] sqr_vol;
+
+  wire [7:0] audio_sample = (sqr_sample ? sqr_vol : 0) + (bass_sample ? bass_vol : 0);
+
+  reg [7:0] audio_pwm_accum;
+  wire [8:0] audio_pwm_accum_next = audio_pwm_accum + audio_sample;
+  wire audio_pwm = audio_pwm_accum_next[8];
+
+  reg [3:0] sample_beat_ctr;
+  wire [3:0] sample_beat_ctr_next = sample_beat_ctr + 1;
+
+  // song loops from 0..287
+  reg [8:0] songpos;
+  wire [8:0] songpos_next = songpos == 287 ? 0 : songpos + 1;
+
+  task new_beat;
+    begin
+      songpos <= songpos_next;
+      if (melody_trigger[songpos_next]) begin
+        sqr_vol <= 63;
+      end
+      if (bass_trigger[songpos_next]) begin
+        bass_vol <= 63;
+      end
+    end
+  endtask
+
+  task new_tick;
+    begin
+      if (sample_beat_ctr_next == 6) begin
+        sample_beat_ctr <= 0;
+        new_beat;
+      end else begin
+        sample_beat_ctr <= sample_beat_ctr_next;
+        sqr_vol <= sqr_vol - (sqr_vol>>3);
+        bass_vol <= bass_vol - (bass_vol>>2);
+      end
+    end
+  endtask
+
+  task new_sample;
+    begin
+      sqr_pha <= sqr_pha + {8'b0, sqr_inc};
+      bass_pha <= bass_pha + {8'b0, bass_inc};
+
+      if (pix_y == 0) begin
+        new_tick;
+      end
+    end
+  endtask
+
   always @(posedge vsync or negedge rst_n) begin
     if (~rst_n) begin
       counter <= 0;
@@ -128,15 +222,27 @@ module tt_um_a1k0n_nyancat(
     end
   end
 
-  always @(posedge clk) begin
-    if (pix_x == 0) begin
-      if (pix_y == 0) begin
-        line_lfsr <= 'h7f;
-      end else begin
-        if (pix_y[2:0] == 0) begin
-          line_lfsr <= line_lfsr_next;
+  always @(posedge clk or negedge rst_n) begin
+    if (~rst_n) begin
+      audio_pwm_accum <= 0;
+      sqr_pha <= 0;
+      bass_pha <= 0;
+      songpos <= 287;
+      sample_beat_ctr <= 0;
+      sqr_vol <= 0;
+      bass_vol <= 0;
+    end else begin
+      if (pix_x == 0) begin
+        new_sample;
+        if (pix_y == 0) begin
+          line_lfsr <= 'h5a;
+        end else begin
+          if (pix_y[2:0] == 0) begin
+            line_lfsr <= line_lfsr_next;
+          end
         end
       end
+      audio_pwm_accum <= audio_pwm_accum_next;
     end
   end
   
