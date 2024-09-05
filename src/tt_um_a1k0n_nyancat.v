@@ -40,12 +40,10 @@ module tt_um_a1k0n_nyancat(
 
   // ------ VIDEO ------
 
-  reg [4:0] frame_count;
+  reg [7:0] frame_count;
   reg [2:0] nyanframe;
-  /*
   reg [6:0] line_lfsr;
   wire [6:0] line_lfsr_next = {line_lfsr[0], line_lfsr[0]^line_lfsr[6], line_lfsr[5:1]};
-  */
 
   hvsync_generator hvsync_gen(
     .clk(clk),
@@ -57,7 +55,7 @@ module tt_um_a1k0n_nyancat(
     .vpos(pix_y)
   );
   
-  wire [6:0] moving_x = pix_x + (frame_count<<2);
+  wire [9:0] moving_x = pix_x + (frame_count<<2);
 
   reg [3:0] palette_r[0:7];
   reg [3:0] palette_g[0:7];
@@ -101,16 +99,17 @@ module tt_um_a1k0n_nyancat(
 
   wire [3:0] rainbow_off = pix_y[6:3] - 5 + {3'b0, moving_x[6]};
 
-/*
   wire star = idx == 0 && (moving_x[9:3] == line_lfsr);
 
-  wire [5:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 48 : palette_r[idx];
-  wire [5:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 48 : palette_g[idx];
-  wire [5:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 48 : palette_b[idx];
-*/
+  wire [5:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 4'hc : palette_r[idx];
+  wire [5:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 4'hc : palette_g[idx];
+  wire [5:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 4'hc : palette_b[idx];
+
+/*
   wire [3:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : palette_r[idx];
   wire [3:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : palette_g[idx];
   wire [3:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : palette_b[idx];
+  */
 
   wire [3:0] dr = r + {2'b0, bayer};
   wire [3:0] dg = g + {2'b0, bayer};
@@ -217,40 +216,39 @@ module tt_um_a1k0n_nyancat(
       nyanframe <= 0;
       cos <= 31;
       sin <= 0;
-    end else if (pix_y == 0 && pix_x == 0) begin
-      frame_count <= frame_count + 1;
-      if (frame_count[1:0] == 0) begin
-        if (nyanframe == 5) begin
-          nyanframe <= 0;
-        end else begin
-          nyanframe <= nyanframe + 1;
-        end
-      end
-      cos <= cos_;
-      sin <= sin_;
-    end
-  end
-
-  always @(posedge clk or negedge rst_n) begin
-    if (~rst_n) begin
       sqr_pha <= 0;
       bass_pha <= 0;
       songpos <= 287;
       sample_beat_ctr <= 0;
       sqr_vol <= 0;
       bass_vol <= 0;
-    end else if (pix_x == 0) begin
-      new_sample;
-    end
-  end
 
-  always @(posedge clk or negedge rst_n) begin
-    if (~rst_n) begin
       audio_pwm_accum <= 0;
       R <= 0;
       G <= 0;
       B <= 0;
-    end else begin
+     end else begin
+      if (pix_x == 0) begin
+        new_sample;
+
+        if (pix_y == 0) begin
+          frame_count <= frame_count + 1;
+          if (frame_count[1:0] == 0) begin
+            if (nyanframe == 5) begin
+              nyanframe <= 0;
+            end else begin
+              nyanframe <= nyanframe + 1;
+            end
+          end
+          cos <= cos_;
+          sin <= sin_;
+          line_lfsr <= 7'h5a;
+        end else begin
+          if (pix_y[2:0] == 0) begin
+            line_lfsr <= line_lfsr_next;
+          end
+        end
+      end
       audio_pwm_accum <= audio_pwm_accum_next[6:0];
 
       R <= video_active ? dr[3:2] : 2'b0;
