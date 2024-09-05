@@ -1,0 +1,2 @@
+tt_um_a1k0n_nyancat
+obj_dir

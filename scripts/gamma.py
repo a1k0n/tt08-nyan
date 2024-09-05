@@ -19,9 +19,11 @@ def gamma_correct_srgb(palette):
     return linear_palette
 
 
-def gamma_correct(palette, gamma=2.4):
+def gamma_correct(palette, gamma=1.6):
     # leave the high bit alone, gamma correct the lower 7 bits
     return palette
+    #return (255 * ((palette/255)**gamma)).astype(np.uint8)
+    #return palette
     #high = palette >> 7
     #low = (palette << 1) & 0xff
     #low = (255 * ((palette/255)**gamma)).astype(np.uint8)

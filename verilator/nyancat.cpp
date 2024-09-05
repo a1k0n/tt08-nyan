@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "Vtt_um_vga_example.h"
+#include "Vtt_um_a1k0n_nyancat.h"
 #include "verilated.h"
 #include <SDL2/SDL.h>
 
@@ -21,14 +21,16 @@ static inline uint32_t lowextend6(uint32_t x) {
   // 01 -> 01010101
   // 10 -> 10101010
   // 11 -> 11111111
-  return (x << 6) | (x << 4) | (x << 2) | x;
+  return x * 0x55;
 }
 
 int main(int argc, char** argv) {
   Verilated::commandArgs(argc, argv);
 
-  Vtt_um_vga_example* top = new Vtt_um_vga_example;
+  Vtt_um_a1k0n_nyancat* top = new Vtt_um_a1k0n_nyancat;
 
+  top->rst_n = 1;
+  top->clk = 0; top->eval(); top->clk = 1; top->eval();
   top->rst_n = 0;
   top->clk = 0; top->eval(); top->clk = 1; top->eval();
   top->rst_n = 1;

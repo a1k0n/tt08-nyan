@@ -5,7 +5,7 @@
 
 `default_nettype none
 
-module tt_um_vga_example(
+module tt_um_a1k0n_nyancat(
   input  wire [7:0] ui_in,    // Dedicated inputs
   output wire [7:0] uo_out,   // Dedicated outputs
   input  wire [7:0] uio_in,   // IOs: Input path
@@ -38,6 +38,8 @@ module tt_um_vga_example(
 
   reg [9:0] counter;
   reg [3:0] nyanframe;
+  reg [6:0] line_lfsr;
+  wire [6:0] line_lfsr_next = {line_lfsr[0], line_lfsr[0]^line_lfsr[6], line_lfsr[5:1]};
 
   hvsync_generator hvsync_gen(
     .clk(clk),
@@ -73,34 +75,45 @@ module tt_um_vga_example(
     $readmemh("../data/nyan.hex", nyan);
   end
 
-  wire [1:0] bi = pix_x[1:0]; // ^ {3{counter[0]}};
+  wire [1:0] bi = pix_x[1:0] ^ {3{counter[0]}};
   wire [1:0] bj = pix_y[1:0];
-  wire [9:0] bx = bi ^ bj;
+  wire [1:0] bx = bi ^ bj;
   wire [3:0] bayer = {bx[0], bi[0], bx[1], bi[1]};
 
-  wire [7:0] nyan_x = pix_x[9:3] - 24;
-  wire [7:0] nyan_y = pix_y[9:3] - 19;
+  reg signed [7:0] cos;
+  reg signed [7:0] sin;
 
-  wire [2:0] idx = ((nyan_x < 34) && (nyan_y < 21)) ? nyan[{nyanframe, nyan_y[4:0], nyan_x[5:0]}] : 0;
-  wire rainbow_on = (idx == 0 || nyan_x > 33) && (pix_x < 300) && (nyan_y < 18);
+  wire signed [7:0] cos_ = cos - (sin>>>5);
+  wire signed [7:0] sin_ = sin + (cos_>>>5);
+
+  wire signed [9:0] nyan_x = pix_x - 222 + (sin_[7:2]^'h20);
+  wire [7:0] nyan_y = (pix_y - 152) >>> 3;
+
+  wire [2:0] idx = ((nyan_x < 272) && (nyan_y < 21)) ? nyan[{nyanframe, nyan_y[4:0], nyan_x[8:3]}] : 0;
+  wire rainbow_on = (idx == 0 || nyan_x > 272) && (pix_x < 300) && (nyan_y < 18);
 
   wire [3:0] rainbow_off = pix_y[7:3] - 5 + moving_x[6];
-  wire [4:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : palette_r[idx];
-  wire [4:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : palette_g[idx];
-  wire [4:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : palette_b[idx];
 
-  wire [4:0] dr = r[3:0] + bayer + {4'b0, r[0]};
-  wire [4:0] dg = g[3:0] + bayer + {4'b0, g[0]};
-  wire [4:0] db = b[3:0] + bayer + {4'b0, b[0]};
+  wire star = idx == 0 && (moving_x[9:3] == line_lfsr);
 
-  assign R = video_active ? {r[4], dr[4]} : 2'b0;
-  assign G = video_active ? {g[4], dg[4]} : 2'b0;
-  assign B = video_active ? {b[4], db[4]} : 2'b0;
-  
-  always @(posedge vsync) begin
+  wire [4:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 31 : palette_r[idx];
+  wire [4:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 31 : palette_g[idx];
+  wire [4:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 31 : palette_b[idx];
+
+  wire [5:0] dr = r + r[4:1] + {1'b0, bayer} + {4'b0, r[4]} + {4'b0, r[0]};
+  wire [5:0] dg = g + g[4:1] + {1'b0, bayer} + {4'b0, g[4]} + {4'b0, g[0]};
+  wire [5:0] db = b + b[4:1] + {1'b0, bayer} + {4'b0, b[4]} + {4'b0, b[0]};
+
+  assign R = video_active ? dr[5:4] : 2'b0;
+  assign G = video_active ? dg[5:4] : 2'b0;
+  assign B = video_active ? db[5:4] : 2'b0;
+
+  always @(posedge vsync or negedge rst_n) begin
     if (~rst_n) begin
       counter <= 0;
       nyanframe <= 0;
+      cos <= 127;
+      sin <= 0;
     end else begin
       counter <= counter + 1;
       if (counter[1:0] == 0) begin
@@ -110,7 +123,20 @@ module tt_um_vga_example(
           nyanframe <= nyanframe + 1;
         end
       end
-      
+      cos <= cos_;
+      sin <= sin_;
+    end
+  end
+
+  always @(posedge clk) begin
+    if (pix_x == 0) begin
+      if (pix_y == 0) begin
+        line_lfsr <= 'h7f;
+      end else begin
+        if (pix_y[2:0] == 0) begin
+          line_lfsr <= line_lfsr_next;
+        end
+      end
     end
   end
   
