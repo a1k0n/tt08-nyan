@@ -41,7 +41,7 @@ module tt_um_a1k0n_nyancat(
   // ------ VIDEO ------
 
   reg [4:0] frame_count;
-  reg [3:0] nyanframe;
+  reg [2:0] nyanframe;
   /*
   reg [6:0] line_lfsr;
   wire [6:0] line_lfsr_next = {line_lfsr[0], line_lfsr[0]^line_lfsr[6], line_lfsr[5:1]};
@@ -76,15 +76,15 @@ module tt_um_a1k0n_nyancat(
     $readmemh("../data/rainbow_g.hex", rainbow_g);
     $readmemh("../data/rainbow_b.hex", rainbow_b);
   end
-  reg [2:0] nyan[0:12287];
+  reg [2:0] nyan[0:16383];
   initial begin
     $readmemh("../data/nyan.hex", nyan);
   end
 
-  wire [0:0] bi = pix_x[0:0] ^ {1{frame_count[0]}};
-  wire [0:0] bj = pix_y[0:0] ^ {1{frame_count[0]}};
-  wire [1:0] bx = bi ^ bj;
-  wire [1:0] bayer = {bx[0], bi[0]}; // , bx[1], bi[1]};
+  wire bi = pix_x[0:0] ^ {1{frame_count[0]}};
+  wire bj = pix_y[0:0] ^ {1{frame_count[0]}};
+  wire bx = bi ^ bj;
+  wire [1:0] bayer = {bx, bi};
 
   reg signed [7:0] cos;
   reg signed [7:0] sin;
@@ -92,13 +92,14 @@ module tt_um_a1k0n_nyancat(
   wire signed [7:0] cos_ = cos - (sin>>>5);
   wire signed [7:0] sin_ = sin + (cos_>>>5);
 
-  wire signed [9:0] nyan_x = pix_x - 222 + (sin_[7:2]^'h20);
-  wire [7:0] nyan_y = (pix_y - 152) >>> 3;
+  wire [5:0] nyan_x_offset = sin_[7:2]^6'h20;
+  wire [9:0] nyan_x = pix_x - 222 + {3'b0, nyan_x_offset};
+  wire [7:0] nyan_y = (pix_y - 152) >> 3;
 
   wire [2:0] idx = ((nyan_x < 272) && (nyan_y < 21)) ? nyan[{nyanframe, nyan_y[4:0], nyan_x[8:3]}] : 0;
   wire rainbow_on = (idx == 0 || nyan_x > 272) && (pix_x < 300) && (nyan_y < 18);
 
-  wire [3:0] rainbow_off = pix_y[7:3] - 5 + moving_x[6];
+  wire [3:0] rainbow_off = pix_y[6:3] - 5 + {3'b0, moving_x[6]};
 
 /*
   wire star = idx == 0 && (moving_x[9:3] == line_lfsr);
@@ -121,12 +122,12 @@ module tt_um_a1k0n_nyancat(
 
   // ------ AUDIO ------
 
-  reg [1:0] melody_oct [0:287];
-  reg [2:0] melody_note [0:287];
-  reg melody_trigger [0:287];
-  reg [1:0] bass_oct [0:287];
-  reg [2:0] bass_note [0:287];
-  reg bass_trigger [0:287];
+  reg [1:0] melody_oct [0:511];
+  reg [2:0] melody_note [0:511];
+  reg melody_trigger [0:511];
+  reg [1:0] bass_oct [0:511];
+  reg [2:0] bass_note [0:511];
+  reg bass_trigger [0:511];
   initial begin
     $readmemh("../data/melodyoct.hex", melody_oct);
     $readmemh("../data/melodynote.hex", melody_note);
@@ -137,30 +138,35 @@ module tt_um_a1k0n_nyancat(
   end
 
   reg [7:0] noteinctable [0:7];
+  reg [7:0] noteinctable2 [0:7];
   initial begin
     $readmemh("../data/noteinc.hex", noteinctable);
+    $readmemh("../data/noteinc.hex", noteinctable2);
   end
 
   reg [15:0] bass_pha;
   wire [2:0] cur_bass_note = bass_note[songpos];
   wire [1:0] cur_bass_oct = bass_oct[songpos];
   wire [7:0] bass_inc = noteinctable[cur_bass_note];
-  wire bass_sample = cur_bass_oct == 3 ? bass_pha[12] :
-                      cur_bass_oct == 2 ? bass_pha[13] :
-                     cur_bass_oct == 1 ? bass_pha[14] :
-                      bass_pha[15];
+  wire bass_on = 
+    cur_bass_oct == 3 ? bass_pha[12] :
+    cur_bass_oct == 2 ? bass_pha[13] :
+    cur_bass_oct == 1 ? bass_pha[14] :
+    bass_pha[15];
+  wire [5:0] bass_sample = bass_on ? bass_vol : 6'd0;
   reg [5:0] bass_vol;
 
   reg [12:0] sqr_pha;
   wire [2:0] cur_melody_note = melody_note[songpos];
   wire [1:0] cur_melody_oct = melody_oct[songpos];
-  wire [7:0] sqr_inc = noteinctable[cur_melody_note];
-  wire sqr_sample =
+  wire [7:0] sqr_inc = noteinctable2[cur_melody_note];
+  wire sqr_on =
    cur_melody_oct == 2 ? sqr_pha[10] :
    cur_melody_oct == 1 ? sqr_pha[11] : sqr_pha[12];
+  wire [5:0] sqr_sample = sqr_on ? sqr_vol : 6'd0;
   reg [5:0] sqr_vol;
 
-  wire [6:0] audio_sample = (sqr_sample ? sqr_vol : 0) + (bass_sample ? bass_vol : 0);
+  wire [6:0] audio_sample = sqr_sample + bass_sample;
 
   reg [6:0] audio_pwm_accum;
   wire [7:0] audio_pwm_accum_next = audio_pwm_accum + audio_sample;
@@ -200,8 +206,8 @@ module tt_um_a1k0n_nyancat(
 
   task new_sample;
     begin
-      sqr_pha <= sqr_pha + {8'b0, sqr_inc};
-      bass_pha <= bass_pha + {8'b0, bass_inc};
+      sqr_pha <= sqr_pha + {4'b0, sqr_inc};
+      bass_pha <= bass_pha + {7'b0, bass_inc};
 
       if (pix_y == 0) begin
         new_tick;

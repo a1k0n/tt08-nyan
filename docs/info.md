@@ -15,6 +15,16 @@ You can also include images in this folder and reference them in the markdown. E
 
 Outputs nyancat on VGA with music!
 
+Colors and animation are all from the original nyan.cat site, using a 2x2 Bayer
+dithering matrix which inverts on alternate frames for better color rendition on
+the Tiny VGA Pmod.
+
+Sound is generated from a MIDI file, split into melody and bass parts. Melody
+and bass are each square waves mixed with a simple exponential decay envelope,
+which is then fed to a 7-bit sigma-delta stage.
+
+Unfortunately I had to prune the backround starfield to fit within 1 tile.
+
 ## How to test
 
 Set clock to 25.175MHz or thereabouts, give reset pulse, and enjoy

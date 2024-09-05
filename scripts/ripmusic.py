@@ -99,16 +99,20 @@ def noteinc(noteidx):
   
 print("melody increment table", ' '.join(["%02x" % noteinc(n) for n in melody_scale]))
 
-def writehex(name, data):
+def writehex(name, data, pad=0):
     with open('../data/' + name, 'w') as f:
         f.write(" ".join(["%01x" % n for n in data]))
+        # fill out to 512 entries with x's
+        for _ in range(pad - len(data)):
+            f.write(' x')
+        f.write('\n')
 
-writehex("bassnote.hex", bassnote)
-writehex("bassoct.hex", bassoct - np.min(bassoct))
-writehex("basstrigger.hex", basstrigger)
-writehex("melodynote.hex", melodynote)
-writehex("melodyoct.hex", melodyoct - np.min(melodyoct))
-writehex("melodytrigger.hex", melodytrigger)
+writehex("bassnote.hex", bassnote, pad=512)
+writehex("bassoct.hex", bassoct - np.min(bassoct), pad=512)
+writehex("basstrigger.hex", basstrigger, pad=512)
+writehex("melodynote.hex", melodynote, pad=512)
+writehex("melodyoct.hex", melodyoct - np.min(melodyoct), pad=512)
+writehex("melodytrigger.hex", melodytrigger, pad=512)
 
 writehex("noteinc.hex", [noteinc(n) for n in melody_scale])
 

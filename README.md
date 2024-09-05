@@ -2,9 +2,11 @@
 
 # Tiny Tapeout Nyan Cat
 
-![preview](docs/preview.png)
+A 1x1 tile VGA nyan cat with sound hacked together the day before the Tiny Tapeout 8 deadline
 
 - [Read the documentation for project](docs/info.md)
+
+![preview](docs/preview.png)
 
 ## What is Tiny Tapeout?
 

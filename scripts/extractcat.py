@@ -88,3 +88,11 @@ for i in range(6, 12):
 
 print('  };')
 print('end')
+
+# fill nyan.hex with x's up to 16384 entries
+print("filling nyan.hex with %d x's" % (16384 - datasiz))
+for _ in range(16384 - datasiz):
+    nyanhex.write('x ')
+nyanhex.write('\n')
+
+nyanhex.close()
