@@ -13,9 +13,10 @@
 
   "//": "PL_TARGET_DENSITY - You can increase this if Global Placement fails with error GPL-0302.",
   "//": "Users have reported that values up to 0.8 worked well for them.",
-  "PL_TARGET_DENSITY_PCT": 96,
+  "PL_TARGET_DENSITY_PCT": 60,
 
   "USE_LIGHTER": 1,
+  "ROUTING_CORES": 32,
 
   "//": "CLOCK_PERIOD - Increase this in case you are getting setup time violations.",
   "//": "The value is in nanoseconds, so 20ns == 50MHz.",

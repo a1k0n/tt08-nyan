@@ -178,10 +178,10 @@ module tt_um_a1k0n_nyancat(
   task new_beat;
     begin
       songpos <= songpos_next;
-      if (melody_trigger[songpos_next]) begin
+      if (melody_trigger[songpos]) begin
         sqr_vol <= 63;
       end
-      if (bass_trigger[songpos_next]) begin
+      if (bass_trigger[songpos]) begin
         bass_vol <= 63;
       end
     end
@@ -211,13 +211,13 @@ module tt_um_a1k0n_nyancat(
     end
   endtask
 
-  always @(posedge vsync or negedge rst_n) begin
+  always @(posedge clk or negedge rst_n) begin
     if (~rst_n) begin
       frame_count <= 0;
       nyanframe <= 0;
       cos <= 31;
       sin <= 0;
-    end else begin
+    end else if (pix_y == 0 && pix_x == 0) begin
       frame_count <= frame_count + 1;
       if (frame_count[1:0] == 0) begin
         if (nyanframe == 5) begin
@@ -231,7 +231,7 @@ module tt_um_a1k0n_nyancat(
     end
   end
 
-  always @(posedge hsync or negedge rst_n) begin
+  always @(posedge clk or negedge rst_n) begin
     if (~rst_n) begin
       sqr_pha <= 0;
       bass_pha <= 0;
@@ -239,7 +239,7 @@ module tt_um_a1k0n_nyancat(
       sample_beat_ctr <= 0;
       sqr_vol <= 0;
       bass_vol <= 0;
-    end else begin
+    end else if (pix_x == 0) begin
       new_sample;
     end
   end
