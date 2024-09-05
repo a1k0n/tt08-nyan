@@ -86,13 +86,13 @@ module tt_um_a1k0n_nyancat(
   wire bx = bi ^ bj;
   wire [1:0] bayer = {bx, bi};
 
-  reg signed [7:0] cos;
-  reg signed [7:0] sin;
+  reg signed [5:0] cos;
+  reg signed [5:0] sin;
 
-  wire signed [7:0] cos_ = cos - (sin>>>5);
-  wire signed [7:0] sin_ = sin + (cos_>>>5);
+  wire signed [5:0] cos_ = cos - (sin>>>3);
+  wire signed [5:0] sin_ = sin + (cos_>>>3);
 
-  wire [5:0] nyan_x_offset = sin_[7:2]^6'h20;
+  wire [5:0] nyan_x_offset = sin^6'h20;
   wire [9:0] nyan_x = pix_x - 222 + {3'b0, nyan_x_offset};
   wire [7:0] nyan_y = (pix_y - 152) >> 3;
 
@@ -215,7 +215,7 @@ module tt_um_a1k0n_nyancat(
     if (~rst_n) begin
       frame_count <= 0;
       nyanframe <= 0;
-      cos <= 127;
+      cos <= 31;
       sin <= 0;
     end else begin
       frame_count <= frame_count + 1;
@@ -231,9 +231,8 @@ module tt_um_a1k0n_nyancat(
     end
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge hsync or negedge rst_n) begin
     if (~rst_n) begin
-      audio_pwm_accum <= 0;
       sqr_pha <= 0;
       bass_pha <= 0;
       songpos <= 287;
@@ -241,25 +240,23 @@ module tt_um_a1k0n_nyancat(
       sqr_vol <= 0;
       bass_vol <= 0;
     end else begin
-      if (pix_x == 0) begin
-        new_sample;
-        /*
-        if (pix_y == 0) begin
-          line_lfsr <= 'h5a;
-        end else begin
-          if (pix_y[2:0] == 0) begin
-            line_lfsr <= line_lfsr_next;
-          end
-        end
-        */
-      end
-      audio_pwm_accum <= audio_pwm_accum_next;
+      new_sample;
+    end
+  end
+
+  always @(posedge clk or negedge rst_n) begin
+    if (~rst_n) begin
+      audio_pwm_accum <= 0;
+      R <= 0;
+      G <= 0;
+      B <= 0;
+    end else begin
+      audio_pwm_accum <= audio_pwm_accum_next[6:0];
 
       R <= video_active ? dr[3:2] : 2'b0;
       G <= video_active ? dg[3:2] : 2'b0;
       B <= video_active ? db[3:2] : 2'b0;
-
     end
   end
-  
+
 endmodule
