@@ -75,8 +75,8 @@ module tt_um_a1k0n_nyancat(
     $readmemh("../data/nyan.hex", nyan);
   end
 
-  wire [1:0] bi = pix_x[1:0] ^ {3{counter[0]}};
-  wire [1:0] bj = pix_y[1:0];
+  wire [1:0] bi = pix_x[1:0] ^ {2{counter[0]}};
+  wire [1:0] bj = pix_y[1:0];// ^ {2{counter[1]}};
   wire [1:0] bx = bi ^ bj;
   wire [3:0] bayer = {bx[0], bi[0], bx[1], bi[1]};
 
