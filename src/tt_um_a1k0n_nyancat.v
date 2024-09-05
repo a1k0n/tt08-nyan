@@ -19,9 +19,9 @@ module tt_um_a1k0n_nyancat(
   // VGA signals
   wire hsync;
   wire vsync;
-  wire [1:0] R;
-  wire [1:0] G;
-  wire [1:0] B;
+  reg [1:0] R;
+  reg [1:0] G;
+  reg [1:0] B;
   wire video_active;
   wire [9:0] pix_x;
   wire [9:0] pix_y;
@@ -115,10 +115,6 @@ module tt_um_a1k0n_nyancat(
   wire [3:0] dr = r + {2'b0, bayer};
   wire [3:0] dg = g + {2'b0, bayer};
   wire [3:0] db = b + {2'b0, bayer};
-
-  assign R = video_active ? dr[3:2] : 2'b0;
-  assign G = video_active ? dg[3:2] : 2'b0;
-  assign B = video_active ? db[3:2] : 2'b0;
 
   // ------ AUDIO ------
 
@@ -258,6 +254,11 @@ module tt_um_a1k0n_nyancat(
         */
       end
       audio_pwm_accum <= audio_pwm_accum_next;
+
+      R <= video_active ? dr[3:2] : 2'b0;
+      G <= video_active ? dg[3:2] : 2'b0;
+      B <= video_active ? db[3:2] : 2'b0;
+
     end
   end
   
