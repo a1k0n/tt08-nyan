@@ -59,18 +59,18 @@ module tt_um_a1k0n_nyancat(
   
   wire [9:0] moving_x = pix_x + (counter<<2);
 
-  reg [5:0] palette_r[0:7];
-  reg [5:0] palette_g[0:7];
-  reg [5:0] palette_b[0:7];
+  reg [3:0] palette_r[0:7];
+  reg [3:0] palette_g[0:7];
+  reg [3:0] palette_b[0:7];
   initial begin
     $readmemh("../data/palette_r.hex", palette_r);
     $readmemh("../data/palette_g.hex", palette_g);
     $readmemh("../data/palette_b.hex", palette_b);
   end
 
-  reg [5:0] rainbow_r[0:7];
-  reg [5:0] rainbow_g[0:7];
-  reg [5:0] rainbow_b[0:7];
+  reg [3:0] rainbow_r[0:7];
+  reg [3:0] rainbow_g[0:7];
+  reg [3:0] rainbow_b[0:7];
   initial begin
     $readmemh("../data/rainbow_r.hex", rainbow_r);  
     $readmemh("../data/rainbow_g.hex", rainbow_g);
@@ -81,10 +81,10 @@ module tt_um_a1k0n_nyancat(
     $readmemh("../data/nyan.hex", nyan);
   end
 
-  wire [1:0] bi = pix_x[1:0] ^ {2{counter[0]}};
-  wire [1:0] bj = pix_y[1:0];// ^ {2{counter[1]}};
+  wire [0:0] bi = pix_x[0:0] ^ {1{counter[0]}};
+  wire [0:0] bj = pix_y[0:0] ^ {1{counter[1]}};
   wire [1:0] bx = bi ^ bj;
-  wire [3:0] bayer = {bx[0], bi[0], bx[1], bi[1]};
+  wire [1:0] bayer = {bx[0], bi[0]}; // , bx[1], bi[1]};
 
   reg signed [7:0] cos;
   reg signed [7:0] sin;
@@ -107,17 +107,17 @@ module tt_um_a1k0n_nyancat(
   wire [5:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 48 : palette_g[idx];
   wire [5:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 48 : palette_b[idx];
 */
-  wire [5:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : palette_r[idx];
-  wire [5:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : palette_g[idx];
-  wire [5:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : palette_b[idx];
+  wire [3:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : palette_r[idx];
+  wire [3:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : palette_g[idx];
+  wire [3:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : palette_b[idx];
 
-  wire [5:0] dr = r + {2'b0, bayer};
-  wire [5:0] dg = g + {2'b0, bayer};
-  wire [5:0] db = b + {2'b0, bayer};
+  wire [3:0] dr = r + {2'b0, bayer};
+  wire [3:0] dg = g + {2'b0, bayer};
+  wire [3:0] db = b + {2'b0, bayer};
 
-  assign R = video_active ? dr[5:4] : 2'b0;
-  assign G = video_active ? dg[5:4] : 2'b0;
-  assign B = video_active ? db[5:4] : 2'b0;
+  assign R = video_active ? dr[3:2] : 2'b0;
+  assign G = video_active ? dg[3:2] : 2'b0;
+  assign B = video_active ? db[3:2] : 2'b0;
 
   // ------ AUDIO ------
 

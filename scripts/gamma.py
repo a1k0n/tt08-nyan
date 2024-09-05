@@ -32,4 +32,7 @@ def gamma_correct(palette, gamma=1.6):
 def dither_correct(palette):
     # pre-emphasize the palette entries so that full scale (0xff) is 0x30
     # so that adding the 4-bit dithering pattern will create the correct output in the 2 MSBs
-    return (palette * 0x30 / 0xff).astype(np.uint8)
+    # return (palette * 0x30 / 0xff).astype(np.uint8)
+
+    # actually let's just use 4-level dithering
+    return (palette * 0xc / 0xff).astype(np.uint8)
