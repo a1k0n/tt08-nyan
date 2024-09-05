@@ -40,7 +40,7 @@ module tt_um_a1k0n_nyancat(
 
   // ------ VIDEO ------
 
-  reg [9:0] counter;
+  reg [4:0] frame_count;
   reg [3:0] nyanframe;
   /*
   reg [6:0] line_lfsr;
@@ -57,7 +57,7 @@ module tt_um_a1k0n_nyancat(
     .vpos(pix_y)
   );
   
-  wire [9:0] moving_x = pix_x + (counter<<2);
+  wire [6:0] moving_x = pix_x + (frame_count<<2);
 
   reg [3:0] palette_r[0:7];
   reg [3:0] palette_g[0:7];
@@ -81,8 +81,8 @@ module tt_um_a1k0n_nyancat(
     $readmemh("../data/nyan.hex", nyan);
   end
 
-  wire [0:0] bi = pix_x[0:0] ^ {1{counter[0]}};
-  wire [0:0] bj = pix_y[0:0] ^ {1{counter[1]}};
+  wire [0:0] bi = pix_x[0:0] ^ {1{frame_count[0]}};
+  wire [0:0] bj = pix_y[0:0] ^ {1{frame_count[0]}};
   wire [1:0] bx = bi ^ bj;
   wire [1:0] bayer = {bx[0], bi[0]}; // , bx[1], bi[1]};
 
@@ -211,13 +211,13 @@ module tt_um_a1k0n_nyancat(
 
   always @(posedge vsync or negedge rst_n) begin
     if (~rst_n) begin
-      counter <= 0;
+      frame_count <= 0;
       nyanframe <= 0;
       cos <= 127;
       sin <= 0;
     end else begin
-      counter <= counter + 1;
-      if (counter[1:0] == 0) begin
+      frame_count <= frame_count + 1;
+      if (frame_count[1:0] == 0) begin
         if (nyanframe == 5) begin
           nyanframe <= 0;
         end else begin
