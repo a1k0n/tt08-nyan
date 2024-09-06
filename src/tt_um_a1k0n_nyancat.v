@@ -141,6 +141,7 @@ module tt_um_a1k0n_nyancat(
   reg [1:0] bass_oct [0:511];
   reg [2:0] bass_note [0:511];
   reg bass_trigger [0:511];
+  reg kick_trigger [0:511];
   initial begin
     $readmemh("../data/melodyoct.hex", melody_oct);
     $readmemh("../data/melodynote.hex", melody_note);
@@ -148,6 +149,7 @@ module tt_um_a1k0n_nyancat(
     $readmemh("../data/bassoct.hex", bass_oct);
     $readmemh("../data/bassnote.hex", bass_note);
     $readmemh("../data/basstrigger.hex", bass_trigger);
+    $readmemh("../data/kicktrigger.hex", kick_trigger);
   end
 
   reg [7:0] noteinctable [0:7];
@@ -160,13 +162,15 @@ module tt_um_a1k0n_nyancat(
   reg [15:0] bass_pha;
   wire [2:0] cur_bass_note = bass_note[songpos];
   wire [1:0] cur_bass_oct = bass_oct[songpos];
-  wire [7:0] bass_inc = noteinctable[cur_bass_note];
+  wire [8:0] bass_inc = kick_on ? kick_osci : {1'b0, noteinctable[cur_bass_note]};
   wire bass_on = 
     cur_bass_oct == 3 ? bass_pha[12] :
     cur_bass_oct == 2 ? bass_pha[13] :
     cur_bass_oct == 1 ? bass_pha[14] :
     bass_pha[15];
-  wire [5:0] bass_sample = bass_on ? bass_vol : 6'd0;
+  wire [5:0] bass_sample = 
+    kick_on ? (bass_pha[15] ? 6'd63 : 6'd0) :
+    bass_on ? bass_vol : 6'd0;
   reg [5:0] bass_vol;
 
   reg [12:0] sqr_pha;
@@ -180,6 +184,10 @@ module tt_um_a1k0n_nyancat(
 
   wire [5:0] sqr_sample = sqr_on ? sqr_vol : 6'd0;
   reg [5:0] sqr_vol;
+
+  reg [1:0] kick_ctr;
+  wire kick_on = kick_ctr != 0;
+  reg [8:0] kick_osci;
 
   reg [9:0] audio_sample_lpf;
   wire [6:0] audio_sample = sqr_sample + bass_sample;
@@ -204,6 +212,10 @@ module tt_um_a1k0n_nyancat(
       if (bass_trigger[songpos]) begin
         bass_vol <= 63;
       end
+      if (kick_trigger[songpos]) begin
+        kick_ctr <= 1;
+        kick_osci <= 9'h180;
+      end
     end
   endtask
 
@@ -216,6 +228,10 @@ module tt_um_a1k0n_nyancat(
         sample_beat_ctr <= sample_beat_ctr_next;
         sqr_vol <= sqr_vol - (sqr_vol>>3);
         bass_vol <= bass_vol - (bass_vol>>2);
+        if (kick_ctr != 0) begin
+          kick_ctr <= kick_ctr+1;
+          kick_osci <= kick_osci - (kick_osci>>3);
+        end
       end
     end
   endtask
