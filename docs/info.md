@@ -21,9 +21,11 @@ the Tiny VGA Pmod.
 
 Sound is generated from a MIDI file, split into melody and bass parts. Melody
 and bass are each square waves mixed with a simple exponential decay envelope,
-which is then fed to a 7-bit sigma-delta stage.
+which is then fed to a low-pass filter and then a sigma-delta DAC.
 
-Unfortunately I had to prune the backround starfield to fit within 1 tile.
+This was designed to fit into 1 tile, and it *almost* did -- the cells take up
+about 93% of 1 tile, but detailed routing doesn't finish. With the deadline
+approaching I was forced to grow it to 1x2, so I threw in a little easter egg.
 
 ## How to test
 
