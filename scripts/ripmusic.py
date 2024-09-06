@@ -16,6 +16,10 @@ melodynote = np.zeros(288, dtype=int)
 melodyoct = np.zeros(288, dtype=int)
 melodytrigger = np.zeros(288, dtype=int)
 
+highnote = 75
+lownote = 59
+lasthighT = None
+
 notes = ['C ', 'C#', 'D ', 'D#', 'E ', 'F ', 'F#', 'G ', 'G#', 'A ', 'A#', 'B ']
 # Iterate through all tracks
 for i, track in enumerate(midi_file.tracks):
@@ -25,17 +29,31 @@ for i, track in enumerate(midi_file.tracks):
         # Print all MIDI messages
         T += msg.time
         if msg.type == 'note_on':
+            if msg.note == 90:
+                # skip this note as it's used in the only chord which we can't do
+                continue
             note, oct = msg.note%12, msg.note//12
-            print(T//96, T%96, 'note', notes[msg.note%12], 'oct', msg.note//12)
             # highest note in the bassline is E5
-            if oct <= 4 or (oct == 5 and note <= 4):
-                bassnote[T//96] = note
-                bassoct[T//96] = oct
-                basstrigger[T//96] = 1
-            elif oct < 7 or (oct == 7 and note < 6):  # filter out an extra F#7
+            highdist = np.abs(msg.note - highnote)
+            lowdist = np.abs(msg.note - lownote)
+            print(T//96, T%96, 'note', msg.note, notes[msg.note%12], 'oct', msg.note//12, 'highdist', highdist, 'lowdist', lowdist)
+            if highdist < lowdist and T != lasthighT:
                 melodynote[T//96] = note
                 melodyoct[T//96] = oct
                 melodytrigger[T//96] = 1
+                highnote = msg.note
+                lasthighT = T
+                if lownote > highnote:
+                    lownote = highnote - 1
+                print("  melody")
+            else:
+                bassnote[T//96] = note
+                bassoct[T//96] = oct
+                basstrigger[T//96] = 1
+                lownote = msg.note
+                if highnote < lownote:
+                    highnote = lownote + 1
+                print("  bass")
 
         if msg.type == 'end_of_track':
             print(T//96, T%96, 'end_of_track')
