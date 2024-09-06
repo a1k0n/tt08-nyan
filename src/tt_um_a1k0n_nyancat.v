@@ -79,18 +79,23 @@ module tt_um_a1k0n_nyancat(
     $readmemh("../data/nyan.hex", nyan);
   end
 
+  reg [1:0] dealwithit[0:255];  // 32x8 (but really 24x5)
+  initial begin
+    $readmemh("../data/dealwithit.hex", dealwithit);
+  end
+
   wire bi = pix_x[0:0] ^ {1{frame_count[0]}};
   wire bj = pix_y[0:0] ^ {1{frame_count[0]}};
   wire bx = bi ^ bj;
   wire [1:0] bayer = {bx, bi};
 
-  reg signed [5:0] cos;
-  reg signed [5:0] sin;
+  reg signed [6:0] cos;
+  reg signed [6:0] sin;
 
-  wire signed [5:0] cos_ = cos - (sin>>>3);
-  wire signed [5:0] sin_ = sin + (cos_>>>3);
+  wire signed [6:0] cos_ = cos - (sin>>>4);
+  wire signed [6:0] sin_ = sin + (cos_>>>4);
 
-  wire [5:0] nyan_x_offset = sin^6'h20;
+  wire [5:0] nyan_x_offset = sin[6:1] ^ 6'h20;
   wire [9:0] nyan_x = pix_x - 222 + {3'b0, nyan_x_offset};
   wire [7:0] nyan_y = (pix_y - 152) >> 3;
 
@@ -101,9 +106,22 @@ module tt_um_a1k0n_nyancat(
 
   wire star = idx == 0 && (moving_x[9:3] == line_lfsr);
 
-  wire [5:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 4'hc : palette_r[idx];
-  wire [5:0] g = rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 4'hc : palette_g[idx];
-  wire [5:0] b = rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 4'hc : palette_b[idx];
+  wire [9:0] dwi_x = nyan_x - 160;
+  wire [9:0] dwi_y = songpos < 224 ? 480 : pix_y + 10'd908 - (songpos<<2); // pix_y - 240 + 287-(songpos<<2);
+  wire dwi_on = dwi_x < 96 && dwi_y < 20;
+  wire [1:0] dwi = dealwithit[{dwi_y[4:2],dwi_x[6:2]}] & {2{dwi_on}};
+
+/*
+  wire oscope = pix_x < audio_sample_lpf[10:4];
+
+  wire [5:0] r = oscope ? 4'hc : rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 4'hc : palette_r[idx];
+  wire [5:0] g = oscope ? 4'hc : rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 4'hc : palette_g[idx];
+  wire [5:0] b = oscope ? 4'hc : rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 4'hc : palette_b[idx];
+  */
+
+  wire [5:0] r = dwi == 2 ? 4'hc : dwi == 1 ? 0 : rainbow_on ? rainbow_r[rainbow_off[3:1]] : star ? 4'hc : palette_r[idx];
+  wire [5:0] g = dwi == 2 ? 4'hc : dwi == 1 ? 0 : rainbow_on ? rainbow_g[rainbow_off[3:1]] : star ? 4'hc : palette_g[idx];
+  wire [5:0] b = dwi == 2 ? 4'hc : dwi == 1 ? 0 : rainbow_on ? rainbow_b[rainbow_off[3:1]] : star ? 4'hc : palette_b[idx];
 
 /*
   wire [3:0] r = rainbow_on ? rainbow_r[rainbow_off[3:1]] : palette_r[idx];
@@ -156,16 +174,19 @@ module tt_um_a1k0n_nyancat(
   wire [1:0] cur_melody_oct = melody_oct[songpos];
   wire [7:0] sqr_inc = noteinctable2[cur_melody_note];
   wire sqr_on =
-   cur_melody_oct == 2 ? sqr_pha[10] :
-   cur_melody_oct == 1 ? sqr_pha[11] : sqr_pha[12];
+   cur_melody_oct == 2 ? sqr_pha[10]&sqr_pha[9] :
+   cur_melody_oct == 1 ? sqr_pha[11]&sqr_pha[10] :
+   sqr_pha[12]&sqr_pha[11];
+
   wire [5:0] sqr_sample = sqr_on ? sqr_vol : 6'd0;
   reg [5:0] sqr_vol;
 
+  reg [9:0] audio_sample_lpf;
   wire [6:0] audio_sample = sqr_sample + bass_sample;
 
-  reg [6:0] audio_pwm_accum;
-  wire [7:0] audio_pwm_accum_next = audio_pwm_accum + audio_sample;
-  wire audio_pwm = audio_pwm_accum_next[7];
+  reg [9:0] audio_pwm_accum;
+  wire [10:0] audio_pwm_accum_next = audio_pwm_accum + audio_sample_lpf;
+  wire audio_pwm = audio_pwm_accum_next[10];
 
   reg [2:0] sample_beat_ctr;
   wire [2:0] sample_beat_ctr_next = sample_beat_ctr + 1;
@@ -203,6 +224,7 @@ module tt_um_a1k0n_nyancat(
     begin
       sqr_pha <= sqr_pha + {4'b0, sqr_inc};
       bass_pha <= bass_pha + {7'b0, bass_inc};
+      audio_sample_lpf <= audio_sample_lpf + audio_sample - (audio_sample_lpf>>3);
 
       if (pix_y == 0) begin
         new_tick;
@@ -214,7 +236,7 @@ module tt_um_a1k0n_nyancat(
     if (~rst_n) begin
       frame_count <= 0;
       nyanframe <= 0;
-      cos <= 31;
+      cos <= 63;
       sin <= 0;
       sqr_pha <= 0;
       bass_pha <= 0;
@@ -249,7 +271,7 @@ module tt_um_a1k0n_nyancat(
           end
         end
       end
-      audio_pwm_accum <= audio_pwm_accum_next[6:0];
+      audio_pwm_accum <= audio_pwm_accum_next;
 
       R <= video_active ? dr[3:2] : 2'b0;
       G <= video_active ? dg[3:2] : 2'b0;
