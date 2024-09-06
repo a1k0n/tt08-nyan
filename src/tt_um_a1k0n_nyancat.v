@@ -106,8 +106,17 @@ module tt_um_a1k0n_nyancat(
 
   wire star = idx == 0 && (moving_x[9:3] == line_lfsr);
 
-  wire [9:0] dwi_x = nyan_x - 160;
-  wire [9:0] dwi_y = songpos < 224 ? 480 : pix_y + 10'd908 - (songpos<<2); // pix_y - 240 + 287-(songpos<<2);
+  wire nyanhead_x = ~((nyanframe==1) | (nyanframe==2) | (nyanframe==3));
+  wire nyanhead_y = ((nyanframe==0) | (nyanframe==1));
+  wire [9:0] dwi_x = 
+    song_loops ? nyan_x - 164 + (nyanhead_x<<3) :
+    nyan_x - 164;
+  wire [9:0] dwi_y = 
+    song_loops ? 
+      // after the second loop, raise the glasses back up
+      (songpos < 224 ? pix_y - 240 + (nyanhead_y<<3) : pix_y + (songpos<<2) - 10'd1136) :
+      // in the first loop, move the glasses down as the song plays
+      (songpos < 224 ? 480 : pix_y + 10'd908 - (songpos<<2));
   wire dwi_on = dwi_x < 96 && dwi_y < 20;
   wire [1:0] dwi = dealwithit[{dwi_y[4:2],dwi_x[6:2]}] & {2{dwi_on}};
 
@@ -200,19 +209,23 @@ module tt_um_a1k0n_nyancat(
   wire [2:0] sample_beat_ctr_next = sample_beat_ctr + 1;
 
   // song loops from 0..287
+  reg [0:0] song_loops;
   reg [8:0] songpos;
-  wire [8:0] songpos_next = songpos == 287 ? 0 : songpos + 1;
+  wire [8:0] songpos_next = songpos == 287 ? 32 : songpos + 1;
 
   task new_beat;
     begin
       songpos <= songpos_next;
-      if (melody_trigger[songpos]) begin
+      if (songpos == 287) begin
+        song_loops <= song_loops + 1;
+      end
+      if (melody_trigger[songpos_next]) begin
         sqr_vol <= 63;
       end
-      if (bass_trigger[songpos]) begin
+      if (bass_trigger[songpos_next]) begin
         bass_vol <= 63;
       end
-      if (kick_trigger[songpos]) begin
+      if (kick_trigger[songpos_next]) begin
         kick_ctr <= 1;
         kick_osci <= 9'h180;
       end
@@ -256,7 +269,8 @@ module tt_um_a1k0n_nyancat(
       sin <= 0;
       sqr_pha <= 0;
       bass_pha <= 0;
-      songpos <= 287;
+      song_loops <= 0;
+      songpos <= -1;
       sample_beat_ctr <= 0;
       sqr_vol <= 0;
       bass_vol <= 0;

@@ -126,10 +126,6 @@ def writehex(name, data, pad=0):
         f.write('\n')
 
 
-# advance the triggers by 1 tick
-basstrigger = np.roll(basstrigger, -1)
-melodytrigger = np.roll(melodytrigger, -1)
-
 writehex("bassnote.hex", bassnote, pad=512)
 writehex("bassoct.hex", bassoct - np.min(bassoct), pad=512)
 writehex("basstrigger.hex", basstrigger, pad=512)
